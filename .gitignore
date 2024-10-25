@@ -1,0 +1,44 @@
+# Python bytecode and compiled files
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Environment variables and configuration
+.env
+*.env
+
+# Virtual environment directories
+venv/
+env/
+.venv/
+ENV/
+
+# Dependency files
+*.egg-info/
+*.eggs
+*.whl
+Pipfile
+Pipfile.lock
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Cache and logs
+*.log
+*.sqlite3
+*.db
+*.sqlite
+*.db-journal
+
+# Docker specific
+docker-compose.override.yml
+docker-compose.yml
+Dockerfile.*
+.dockerignore
+*.tar
+docker-compose.*
+docker_volumes/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
