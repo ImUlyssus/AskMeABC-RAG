@@ -1,6 +1,13 @@
-FROM python:3-alpine3.20
+FROM python:3.10-slim
+
 WORKDIR /app
 COPY . /app
-RUN pip install -r requirements.txt
+
+# Install build-essential and other system dependencies for Python packages
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && pip install -r requirements.txt \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
 EXPOSE 3000
-CMD python ./index.py
+CMD ["python3", "./index.py"]
