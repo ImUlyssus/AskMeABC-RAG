@@ -134,26 +134,39 @@ def get_query_embeddings(query: str) -> list[float]:
 query_embeddings = get_query_embeddings(query="What services are available in InnoTech?")
 
 def query_pinecone_index(
-    query_embeddings: list[float], top_k: int = 2, include_metadata: bool = True
+    query_embeddings: list[float],
+    top_k: int = 1,
+    include_metadata: bool = True,
+    company_id: str = None
 ) -> dict[str, any]:
     """
-    Query a Pinecone index.
+    Query a Pinecone index for a specific company using a filter on metadata.
 
     Args:
     - query_embeddings (list[float]): List of query vectors.
     - top_k (int): Number of nearest neighbors to retrieve (default: 2).
-    - include_metadata (bool): Whether to include metadata in the query response (default: True).
+    - include_metadata (bool): Whether to include metadata in the query response.
+    - company_id (str): The unique company ID to filter by.
 
     Returns:
     - query_response (dict[str, any]): Query response containing nearest neighbors.
     """
+    # filter_dict = {"company_id": company_id} if company_id else None
     query_response = index.query(
-        vector=query_embeddings, top_k=top_k, include_metadata=include_metadata
+        vector=query_embeddings,
+        filter={"company_name": {"$eq": "InnoTech Solutions"}},
+        top_k=top_k,
+        include_metadata=include_metadata,
     )
     return query_response
 
-# Example of calling the function
-query_response = query_pinecone_index(query_embeddings=query_embeddings)
+# Example of calling the function with a filter
+query_response = query_pinecone_index(query_embeddings=query_embeddings, company_id="c54b9f2660088ffe46edfc323baf27817f9caa114c73512d52b591833a26e36a")
+if query_response and "matches" in query_response:
+    print("Matches received from Pinecone:", query_response['matches'])
+else:
+    print("No matches found in the Pinecone response.")
+
 
 # Instantiate the LLM using Gemini
 LLM = ChatGoogleGenerativeAI(
