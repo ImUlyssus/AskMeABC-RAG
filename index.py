@@ -55,7 +55,7 @@ def combine_vector_and_text(company: dict, doc_embeddings: list[list[float]], ch
     for chunk, embedding in zip(chunks, doc_embeddings):
         if not chunk.strip():  # Skip empty text chunks
             continue
-        
+
         doc_id = generate_short_id(chunk)
         data_item = {
             "id": doc_id,
@@ -77,23 +77,23 @@ def embed_chunked_company_data(json_file_path, max_chunk_size=1000):
 
     for company in company_data:
         text_to_embed = company["description"]
-        
+
         # Filter out empty or whitespace-only descriptions
         if not text_to_embed.strip():
             continue
-        
+
         # Chunk the text
         chunks = chunk_text_for_list([text_to_embed], max_chunk_size)[0]
-        
+
         # Remove any empty chunks
         chunks = [chunk for chunk in chunks if chunk.strip()]
-        
+
         if not chunks:
             continue  # Skip if no valid chunks remain
-        
+
         # Generate embeddings for each chunk
         doc_embeddings = embeddings.embed_documents(chunks)
-        
+
         # Combine data with metadata for upserting
         data_with_metadata = combine_vector_and_text(company, doc_embeddings, chunks)
         all_data_with_metadata.extend(data_with_metadata)
@@ -110,9 +110,12 @@ def upsert_data_to_pinecone(data_with_metadata: list[dict[str, any]]) -> None:
     """Upsert data with metadata into a Pinecone index."""
     index.upsert(vectors=data_with_metadata)
 
-# Upsert only if data_with_metadata has valid entries
-data_with_meta_data = embed_chunked_company_data("./CompanyData.json")
-if data_with_meta_data:
+# Give False if you have new data to upsert
+data_already_upserted = True
+
+if data_already_upserted==False:
+    # Upsert only if data_with_metadata has valid entries
+    data_with_meta_data = embed_chunked_company_data("./CompanyData.json")
     upsert_data_to_pinecone(data_with_metadata=data_with_meta_data)
 else:
     print("No valid data to upsert.")
@@ -130,14 +133,15 @@ def get_query_embeddings(query: str) -> list[float]:
     query_embeddings = embeddings.embed_query(query)
     return query_embeddings
 
-# Example of calling the function
-query_embeddings = get_query_embeddings(query="What services are available in InnoTech?")
+user_query = "When was InnoTech founded? Is there any contribution to society. If yes, what is/are those?"
+
+query_embeddings = get_query_embeddings(query=user_query)
 
 def query_pinecone_index(
     query_embeddings: list[float],
     top_k: int = 1,
     include_metadata: bool = True,
-    company_id: str = None
+    company_name: str = None
 ) -> dict[str, any]:
     """
     Query a Pinecone index for a specific company using a filter on metadata.
@@ -154,14 +158,16 @@ def query_pinecone_index(
     # filter_dict = {"company_id": company_id} if company_id else None
     query_response = index.query(
         vector=query_embeddings,
-        filter={"company_name": {"$eq": "InnoTech Solutions"}},
+        filter={"company_name": {"$eq": company_name}},
         top_k=top_k,
         include_metadata=include_metadata,
     )
     return query_response
 
 # Example of calling the function with a filter
-query_response = query_pinecone_index(query_embeddings=query_embeddings, company_id="c54b9f2660088ffe46edfc323baf27817f9caa114c73512d52b591833a26e36a")
+query_response = query_pinecone_index(query_embeddings=query_embeddings, company_name="InnoTech Solutions")
+
+
 if query_response and "matches" in query_response:
     print("Matches received from Pinecone:", query_response['matches'])
 else:
@@ -181,7 +187,7 @@ LLM = ChatGoogleGenerativeAI(
 text_answer = " ".join([doc['metadata']['text'] for doc in query_response['matches']])
 
 # Create the prompt to generate a better answer
-prompt = f"{text_answer} Using the provided information, give me a better and summarized answer."
+prompt = f"Using the provided information, give me a concise answer. \n \n {user_query} \n \n {text_answer}"
 
 def better_query_response(prompt: str) -> str:
     """This function returns a better response using the LLM.
@@ -194,7 +200,7 @@ def better_query_response(prompt: str) -> str:
     """
     # Format the prompt for the conversation model
     conversation_history = [
-        {"role": "system", "content": "You are a helpful assistant that provides summarized answers."},
+        {"role": "system", "content": "You are a helpful assistant that provides concise answers about 50 to 150 words."},
         {"role": "user", "content": prompt}
     ]
 
